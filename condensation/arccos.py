@@ -49,8 +49,12 @@ def arccos(Abundance_filename,Abundance_type,Solar_abun_filename,P_tot,sequence_
     for i in range(len(Name)):
         Abundance_dict.update({Name[i]: Abundance[i]})
 
-    # Calculate the normalized abundance of elements
-    Abun_norm_dict = get_data.get_ratio(Abundance_dict, T_up, P_tot, Name)
+    # Calculate the normalized abundance of elements -- P_TOT NOT USED!
+    Abun_norm_dict = get_data.get_ratio(Abundance_dict, T_up, P_tot, Name)  ## EQN 5 WITHOUT P/(RT)
+    
+#    print 'NORM ABUN DICT:',Abun_norm_dict
+#    print 'SIZE:',np.size(Abun_norm_dict.keys())
+#    print 'SUM OF VALS',np.sum(Abun_norm_dict.values())  ## WHY DOESN'T THIS SUM TO ONE IF IT IS JUST THE NORMALIZED ABUNDANCE
 
     # Python likes to switch the order of things and unfortunately order matters in some of these calculations so we
     # rearrange Name to reflect this
@@ -64,7 +68,7 @@ def arccos(Abundance_filename,Abundance_type,Solar_abun_filename,P_tot,sequence_
     Solids_list = []
     Gasses_list = []
 
-    # Function to create master_list of all molecules considered
+    # Function to create master_list of all molecules considered -- USING GASSES.DAT
     path = open("Data/Gasses.dat", "\rU")
     for i in path:
         if not i.startswith("#"):
@@ -114,7 +118,7 @@ def arccos(Abundance_filename,Abundance_type,Solar_abun_filename,P_tot,sequence_
     Par_Pres_dict = {}
     guess_dict = {}
 
-    Par_Pres_dict = get_data.get_ParPres(Abun_norm_dict, P_tot, T_up, Name)
+    Par_Pres_dict = get_data.get_ParPres(Abun_norm_dict, P_tot, T_up, Name)  ## THIS IS THE FINAL VERSION OF EQN 5
 
     #initial gueses
     guess_dict = Par_Pres_dict
