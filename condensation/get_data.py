@@ -65,7 +65,12 @@ def get_equations(condensing_solids):
     return Molecule_dict,X,Element_dict,Z
 
 def get_abundance(solar_filename,abundance_filename,type):
-    Abundance_path = open("Data/Stellar/abundance_"+abundance_filename+".dat","rU")
+    Abundance_path = open("Data/Stellar/abundance_"+abundance_filename+".dat","rU")  ## WE OPEN THIS FILE FOR MULTIPLIERS
+    
+    
+## ITS CONFUSING TO DEFINE THE RELATIVE ABUNDANCE AS 0... NOT 1
+## Use the 'type' to properly calculate multiplier or raise error if given multiplier of 0 and type=absolute
+
 
     Abundance_rows = Abundance_path.readlines()
     element_names = []
@@ -74,10 +79,10 @@ def get_abundance(solar_filename,abundance_filename,type):
     for i in Abundance_rows:
         split = i.split('\t')
         element_names.append(split[0])
-        element_multipliers.append(float(split[1].rstrip('\n')))
+        element_multipliers.append(float(split[1].rstrip('\n')))  ## THE MULTIPLIER IS THE SECOND COLUMN
     Abundance_path.close()
     abundance_dict  = dict(zip(element_names,element_multipliers))
-    Solar_path = open("Data/Solar/abundance_"+solar_filename+".dat","rU")
+    Solar_path = open("Data/Solar/abundance_"+solar_filename+".dat","rU")  ## THIS FILE IS SOLAR ABUNDANCE
     Solar_rows = Solar_path.readlines()
     name = []
     abundance =[]
@@ -89,44 +94,53 @@ def get_abundance(solar_filename,abundance_filename,type):
             solar_abun = float(values[1].rstrip('\n'))
 
             abun_multiplier = abundance_dict.get(values[0])
-            abundance.append(abun_multiplier*solar_abun)
+            abundance.append(abun_multiplier*solar_abun)  ##  IF ABSOLUTE MULTIPLY THE SOLAR ABUN BY MULTIPLIER.. WHICH IS ZERO
         Solar_path.close
 
-        return name, abundance
+        return name, abundance  ## HERE WE RETURN NAME AND ABUNDANCE WITHOUT REFERENCE TO ANYTHING FROM ABUNDANCE FILENAME
     if type == 'relative':
         for aRow in Solar_rows:
             values = aRow.split('\t')
 
             name.append(values[0])
             solar_abun = float(values[1].rstrip('\n'))
-            abun_multiplier = pow(10.,abundance_dict.get(values[0]))
-            abundance.append(abun_multiplier*solar_abun*1.e10)
+            abun_multiplier = pow(10.,abundance_dict.get(values[0]))  ## HERE AGAIN WE USE THE MULTIPLIER... BUT ITS 1
+            abundance.append(abun_multiplier*solar_abun*1.e10)  
         return name, abundance
     return 0
+
 def get_ratio(Abundance_dict,T,P_tot,Name):
     Sum = 0.
     R = 8.3144621e-2
     ratio = {}
-    H = Abundance_dict['H']
+    H = Abundance_dict['H']  ## Store these dict values as floats
     He = Abundance_dict['He']
     Ne = Abundance_dict['Ne']
     Ar = Abundance_dict['Ar']
+    
+    ## WHAT ARE A, B??? K IS EQUILIBRIUM COEFFICIENT
+    ## I don't think they are used! Neither is P_tot... but shouldn't equilibrium H/H2 depend on pressure?
     A =  2.9836
     B = -11452.
-    K = 10.**(get_K_gasses('H1',T))
+    
+    K = 10.**(get_K_gasses('H1',T))   ## HERE WE CALL GET_K_GASSES('XX',T)
     X = (pow(K,2.))
+    
+    ## WE ARE CALCULATING THE EQUILIBRIUM OF H IN THE DIFFERENT PHASES AT TEMPERATURE T
+    ## Looking for a(H) and a(H2) based on equilibrium coefficients
+    
     H2_coef_a = 4.+X
     H2_coef_b = -((4.*H)+(X*H))
     H2_coef_c = pow(H,2.)
-
+    
     H2 = ((-H2_coef_b)-np.sqrt(pow(H2_coef_b,2.)-(4.*H2_coef_a*H2_coef_c)))/(2.*H2_coef_a)
     monoH= H - 2.*H2
 
-    Sum = monoH+H2+He+Ne+Ar
+    Sum = monoH+H2+He+Ne+Ar  ## THIS IS a(H)+a(H2)+A(NOBLE GASSES) IN MOL AT A GIVEN T
 
     counter = 0
     for i,j in dict.iteritems(Abundance_dict):
-        ratio.update({i:j/Sum})
+        ratio.update({i:j/Sum}) ## Divides a(X) by a(H+H2+NOBLE)
         counter+=1
 
     return ratio
@@ -403,6 +417,7 @@ def get_K_data(solid,T):
 
 
 def get_K_gasses(mol_name,T):
+        
     path = open("Data/Gasses.dat","\rU")
     for temp in path:
         if not temp.startswith("#"):
@@ -411,6 +426,7 @@ def get_K_gasses(mol_name,T):
                 molecule = values
     Name = molecule[0]
     Method = molecule[1]
+        
     Temp_ref = []
     del_G_ref = []
     del_H_ref = []
@@ -422,11 +438,15 @@ def get_K_gasses(mol_name,T):
         for aRow in path_molecule:
             values = aRow.split('\t')
             if not aRow.startswith('#'):
+                
+                ## BUILD AN ARRAY OF REFERENCE VALUES AT A GIVEN TEMP
                 Temp_ref.append(float(values[0]))
                 del_H_ref.append(float(values[4]))
                 H_ref.append(float(values[5]))
                 S_ref.append(float(values[2]))
                 del_G_ref.append(float(values[6]))
+                
+        ## LOOKUP AND INTERPOLATE THE VALUE OF THE QUANTITIES AT TEMPERATURE T
         H0 = lookup_and_interpolate(Temp_ref,H_ref,298.15)*1000.
         change_H = lookup_and_interpolate(Temp_ref,del_H_ref,T)*1000.
         change_S = lookup_and_interpolate(Temp_ref,S_ref,T)
@@ -437,12 +457,12 @@ def get_K_gasses(mol_name,T):
         if T > Temp_ref[-1]:
             return 0
         else:
-            K=((-del_G_gas/(8.3144621*T))*log10(exp(1.)))
+            K=((-del_G_gas/(8.3144621*T))*log10(exp(1.)))  ## HERE IS THE CALCULATION OF K
         #if mol_name =='H2O1':
 
             #print K
-
-        return K
+           
+        return K  
 
     if Method == 'K':
         H0 = float(molecule[2])
